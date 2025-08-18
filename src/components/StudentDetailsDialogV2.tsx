@@ -34,15 +34,10 @@ const StudentDetailsDialogV2 = ({
 }: StudentDetailsDialogV2Props) => {
   const { username, user, isLoggedIn } = useAuth();
   
-  // Debug do contexto de autenticação
-  console.log(`[StudentDetails] 🔐 Context de autenticação:`, {
-    username,
-    user,
-    isLoggedIn,
-    user_name: user?.name,
-    user_email: user?.email,
-    user_role: user?.role
-  });
+  // Debug do contexto de autenticação - LOGS ÓBVIOS
+  console.log('🚨🚨🚨 MODAL ABERTO PARA:', student.nome);
+  console.log('🔐 USUÁRIO LOGADO:', { username, isLoggedIn, role: user?.role });
+  console.log('📝 PODE EDITAR:', { canEditStudentData: true }); // Forçando true para teste
   const [observacoes, setObservacoes] = useState(student.observacoes || "");
   const [dataPagamento, setDataPagamento] = useState(student.dataPagamento || "");
   const [isDateRequired, setIsDateRequired] = useState(false);
@@ -428,15 +423,21 @@ const StudentDetailsDialogV2 = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsEditingStudent(true)}
+                  onClick={() => {
+                    console.log('🔥 BOTÃO DE EDIÇÃO CLICADO!', { user, username, student: student.nome });
+                    setIsEditingStudent(true);
+                  }}
                   className="h-8 px-2"
-                  title={`Editar dados do aluno (Admin: ${user?.role === 'admin'}, CanEdit: ${canEditStudentData})`}
+                  title="🔧 EDITAR DADOS DO ALUNO"
                   style={{ 
-                    opacity: canEditStudentData ? 1 : 0.5,
-                    border: user?.role === 'admin' ? '2px solid green' : '1px solid gray'
+                    backgroundColor: '#ff6b6b',
+                    color: 'white',
+                    border: '3px solid #ff0000',
+                    fontWeight: 'bold'
                   }}
                 >
                   <Edit3 className="h-4 w-4" />
+                  EDIT
                 </Button>
               )}
             </div>
