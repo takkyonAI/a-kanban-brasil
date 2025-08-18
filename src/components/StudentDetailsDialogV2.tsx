@@ -424,13 +424,17 @@ const StudentDetailsDialogV2 = ({
                   </div>
                 )}
               </div>
-              {!isEditingStudent && canEditStudentData && (
+              {!isEditingStudent && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsEditingStudent(true)}
                   className="h-8 px-2"
-                  title="Editar dados do aluno"
+                  title={`Editar dados do aluno (Admin: ${user?.role === 'admin'}, CanEdit: ${canEditStudentData})`}
+                  style={{ 
+                    opacity: canEditStudentData ? 1 : 0.5,
+                    border: user?.role === 'admin' ? '2px solid green' : '1px solid gray'
+                  }}
                 >
                   <Edit3 className="h-4 w-4" />
                 </Button>
