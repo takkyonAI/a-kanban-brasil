@@ -55,8 +55,15 @@ const StudentDetailsDialogV2 = ({
   const canEditObservacoes = !student.createdBy || student.createdBy === username;
   
   // Verificar se o usuário atual pode editar os dados básicos do aluno
-  // Por enquanto, permitindo edição para todos até resolvermos o problema de autenticação
-  const canEditStudentData = true; // TODO: Implementar controle de permissão adequado
+  const canEditStudentData = !student.createdBy || student.createdBy === username || !username;
+  
+  // Debug de permissões
+  console.log(`[StudentDetails] Permissões para ${student.nome}:`, {
+    student_createdBy: student.createdBy,
+    current_username: username,
+    canEditObservacoes,
+    canEditStudentData
+  });
 
   // Reset form when student changes
   useEffect(() => {
