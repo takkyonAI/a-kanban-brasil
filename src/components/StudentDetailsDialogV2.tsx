@@ -32,7 +32,17 @@ const StudentDetailsDialogV2 = ({
   onClose, 
   onUpdate 
 }: StudentDetailsDialogV2Props) => {
-  const { username } = useAuth();
+  const { username, user, isLoggedIn } = useAuth();
+  
+  // Debug do contexto de autenticação
+  console.log(`[StudentDetails] 🔐 Context de autenticação:`, {
+    username,
+    user,
+    isLoggedIn,
+    user_name: user?.name,
+    user_email: user?.email,
+    user_role: user?.role
+  });
   const [observacoes, setObservacoes] = useState(student.observacoes || "");
   const [dataPagamento, setDataPagamento] = useState(student.dataPagamento || "");
   const [isDateRequired, setIsDateRequired] = useState(false);
@@ -55,14 +65,26 @@ const StudentDetailsDialogV2 = ({
   const canEditObservacoes = !student.createdBy || student.createdBy === username;
   
   // Verificar se o usuário atual pode editar os dados básicos do aluno
-  const canEditStudentData = !student.createdBy || student.createdBy === username || !username;
+  // Permitir edição se: 1) é admin, 2) não há criador, 3) é o criador, 4) username é null
+  const canEditStudentData = user?.role === 'admin' || !student.createdBy || student.createdBy === username || !username;
   
-  // Debug de permissões
-  console.log(`[StudentDetails] Permissões para ${student.nome}:`, {
+  // Debug de permissões - logs detalhados
+  console.log(`[StudentDetails] 🔍 Debug completo para ${student.nome}:`, {
     student_createdBy: student.createdBy,
     current_username: username,
+    username_type: typeof username,
+    username_length: username?.length,
     canEditObservacoes,
-    canEditStudentData
+    canEditStudentData,
+    isEditingStudent,
+    modal_isOpen: isOpen
+  });
+  
+  // Log específico para o botão de edição
+  console.log(`[StudentDetails] 🎛️ Botão de edição deve aparecer?`, {
+    condition_1: !isEditingStudent,
+    condition_2: canEditStudentData,
+    final_result: (!isEditingStudent && canEditStudentData)
   });
 
   // Reset form when student changes
