@@ -4,7 +4,7 @@ import { Student, Status } from "@/types";
 import StudentCard from "./StudentCard";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { updateStudentStatus, saveAllStudents, deleteStudent, checkAndFixMigratedStudentFollowUps } from "@/services/supabaseService";
+import { updateStudentStatus, saveAllStudents, deleteStudent, checkAndFixMigratedStudentFollowUps, updateStudent } from "@/services/supabaseService";
 import { getPaymentsForMonth } from "@/services/paymentFilterService";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
@@ -439,6 +439,34 @@ const KanbanBoard = ({ students, onStudentUpdate, filteredStudents, isFiltered, 
     }
   };
 
+  // Função para atualizar dados completos do aluno
+  const handleStudentDataUpdate = async (updatedStudent: Student) => {
+    console.log(`handleStudentDataUpdate chamado para aluno ${updatedStudent.id}: ${updatedStudent.nome}`);
+    
+    try {
+      // Atualizar estado local primeiro para feedback imediato
+      updateLocalStudent(updatedStudent);
+      
+      // Atualizar a UI do componente pai
+      onStudentUpdate(updatedStudent);
+      
+      // Atualizar no banco de dados
+      await updateStudent(updatedStudent);
+      
+      console.log(`Dados do aluno ${updatedStudent.id} atualizados com sucesso`);
+      
+    } catch (error) {
+      console.error("Erro ao atualizar dados do aluno:", error);
+      
+      // Reverter para os dados anteriores no caso de erro
+      const originalStudent = students.find(s => s.id === updatedStudent.id);
+      if (originalStudent) {
+        updateLocalStudent({...originalStudent});
+        onStudentUpdate({...originalStudent});
+      }
+    }
+  };
+
   return (
     <div className="w-full overflow-hidden">
       <div className="flex justify-between items-center mb-4">
@@ -483,7 +511,7 @@ const KanbanBoard = ({ students, onStudentUpdate, filteredStudents, isFiltered, 
                     student={student}
                     onStatusChange={handleStatusChange}
                     onReturnToPrevious={handleReturnToPreviousStatus}
-                    onStudentUpdate={onStudentUpdate}
+                    onStudentUpdate={handleStudentDataUpdate}
                     onStudentDelete={handleDeleteStudent}
                   />
                 ))

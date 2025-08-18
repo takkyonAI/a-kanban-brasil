@@ -743,6 +743,78 @@ export const updateStudentStatus = async (
   }
 };
 
+// Atualizar todos os dados de um estudante
+export const updateStudent = async (student: Student): Promise<void> => {
+  console.log(`Atualizando dados completos do aluno ${student.id}: ${student.nome}`);
+  
+  try {
+    // Converter para formato do banco
+    const dbStudent = convertToDbFormat(student);
+    dbStudent.updated_at = new Date().toISOString();
+    
+    // Tentar update primeiro
+    const { error: updateError } = await supabase
+      .from('students')
+      .update(dbStudent)
+      .eq('id', student.id);
+    
+    if (updateError) {
+      console.error("Erro ao atualizar dados do estudante:", updateError);
+      
+      if (updateError.code === "42501") {
+        // Se for erro de permissão, buscar dados atuais e fazer upsert
+        console.warn("Erro de permissão ao atualizar, tentando obter dados para upsert");
+        
+        const { data: currentData, error: fetchError } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', student.id)
+          .maybeSingle();
+          
+        if (fetchError) {
+          console.error("Erro ao buscar dados atuais do estudante:", fetchError);
+          throw fetchError;
+        }
+        
+        if (currentData) {
+          // Mesclar dados atuais com novos dados
+          const mergedData = { ...currentData, ...dbStudent };
+          
+          const { error: upsertError } = await supabase
+            .from('students')
+            .upsert(mergedData, { onConflict: 'id' });
+            
+          if (upsertError) {
+            console.error("Erro ao usar upsert para dados do estudante:", upsertError);
+            throw upsertError;
+          } else {
+            console.log(`Dados do estudante atualizados com sucesso via upsert: ${student.id}`);
+            toast.success("Dados do aluno atualizados com sucesso!");
+          }
+        } else {
+          console.error(`Estudante com ID ${student.id} não encontrado para upsert`);
+          toast.error("Erro ao atualizar dados", {
+            description: "Estudante não encontrado no banco de dados."
+          });
+          throw new Error(`Estudante com ID ${student.id} não encontrado`);
+        }
+      } else {
+        throw updateError;
+      }
+    } else {
+      console.log(`Dados do estudante atualizados com sucesso via update: ${student.id}`);
+      toast.success("Dados do aluno atualizados com sucesso!");
+    }
+    
+  } catch (error) {
+    console.error("Erro ao atualizar dados do estudante:", error);
+    toast.error("Erro ao atualizar dados do aluno", {
+      description: "Verifique sua conexão e tente novamente."
+    });
+    throw error;
+  }
+};
+
 // Delete a student from the database
 export const deleteStudent = async (studentId: string): Promise<void> => {
   try {
