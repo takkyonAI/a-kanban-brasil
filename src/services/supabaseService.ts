@@ -506,15 +506,20 @@ export const getStudents = async (mes: string): Promise<Student[]> => {
 // Buscar todos os alunos e aplicar filtro de vencimento
 export const getStudentsWithVencimentoFilter = async (targetMonth: string): Promise<Student[]> => {
   try {
-    console.log(`Buscando todos os estudantes e aplicando filtro de vencimento para o mês ${targetMonth}`);
+    console.time(`⚡ [Performance] Carregamento otimizado para ${targetMonth}`);
+    console.log(`🚀 Iniciando carregamento otimizado para o mês ${targetMonth}`);
     
-    // Buscar todos os estudantes do banco
+    // 🚀 OTIMIZAÇÃO 1: Buscar dados com JOIN em uma única query
     const { data, error } = await supabase
       .from('students')
-      .select('*');
+      .select(`
+        *,
+        status_history (*),
+        follow_ups (*)
+      `);
     
     if (error) {
-      console.error("Erro ao buscar todos os estudantes:", error);
+      console.error("❌ Erro ao buscar estudantes com dados relacionados:", error);
       toast.error("Erro ao carregar dados do banco de dados", {
         description: "Verifique sua conexão e tente novamente."
       });
@@ -522,76 +527,58 @@ export const getStudentsWithVencimentoFilter = async (targetMonth: string): Prom
     }
     
     if (!data || data.length === 0) {
-      console.log("Nenhum estudante encontrado no banco");
+      console.log("📭 Nenhum estudante encontrado no banco");
       return [];
     }
     
-    console.log(`Encontrados ${data.length} estudantes no banco total`);
+    console.log(`📊 Carregados ${data.length} estudantes com dados relacionados`);
     
-    // Converter para o formato da aplicação
-    const allStudents = data.map(convertFromDbFormat);
-    
-    // Obter o histórico de status e follow-ups para cada estudante
-    for (const student of allStudents) {
-      try {
-        // Carregar histórico de status
-        const { data: statusHistoryData, error: statusError } = await supabase
-          .from('status_history')
-          .select('*')
-          .eq('student_id', student.id)
-          .order('changed_at', { ascending: true });
-        
-        if (statusError) {
-          console.error(`Erro ao carregar histórico de status para ${student.id}:`, statusError);
-          student.statusHistory = [];
-        } else if (statusHistoryData && statusHistoryData.length > 0) {
-          student.statusHistory = statusHistoryData.map((dbHistory: any) => ({
-            id: dbHistory.id,
-            studentId: dbHistory.student_id,
-            oldStatus: dbHistory.old_status as Status,
-            newStatus: dbHistory.new_status as Status,
-            changedBy: dbHistory.changed_by,
-            changedAt: new Date(dbHistory.changed_at)
-          }));
-        } else {
-          student.statusHistory = [];
-        }
-        
-        // Carregar follow-ups
-        const { data: followUpsData, error: followUpsError } = await supabase
-          .from('follow_ups')
-          .select('*')
-          .eq('student_id', student.id)
-          .order('created_at', { ascending: true });
-        
-        if (followUpsError) {
-          console.error(`Erro ao carregar follow-ups para ${student.id}:`, followUpsError);
-          student.followUps = [];
-        } else if (followUpsData && followUpsData.length > 0) {
-          student.followUps = followUpsData.map((dbFollowUp: any) => ({
-            id: dbFollowUp.id,
-            studentId: dbFollowUp.student_id,
-            content: dbFollowUp.content,
-            createdBy: dbFollowUp.created_by,
-            createdAt: new Date(dbFollowUp.created_at),
-            updatedAt: new Date(dbFollowUp.updated_at)
-          }));
-        } else {
-          student.followUps = [];
-        }
-      } catch (innerError) {
-        console.error("Erro ao processar dados do estudante:", innerError);
+    // 🚀 OTIMIZAÇÃO 2: Processar dados já carregados em batch (não loop sequencial)
+    const allStudents: Student[] = data.map((dbStudent: any) => {
+      const student = convertFromDbFormat(dbStudent);
+      
+      // Processar status_history já carregado via JOIN
+      if (dbStudent.status_history && Array.isArray(dbStudent.status_history)) {
+        student.statusHistory = dbStudent.status_history.map((dbHistory: any) => ({
+          id: dbHistory.id,
+          studentId: dbHistory.student_id,
+          oldStatus: dbHistory.old_status as Status,
+          newStatus: dbHistory.new_status as Status,
+          changedBy: dbHistory.changed_by,
+          changedAt: new Date(dbHistory.changed_at)
+        }));
+      } else {
+        student.statusHistory = [];
       }
-    }
+      
+      // Processar follow_ups já carregados via JOIN
+      if (dbStudent.follow_ups && Array.isArray(dbStudent.follow_ups)) {
+        student.followUps = dbStudent.follow_ups.map((dbFollowUp: any) => ({
+          id: dbFollowUp.id,
+          studentId: dbFollowUp.student_id,
+          content: dbFollowUp.content,
+          createdBy: dbFollowUp.created_by,
+          createdAt: new Date(dbFollowUp.created_at),
+          updatedAt: new Date(dbFollowUp.updated_at)
+        }));
+      } else {
+        student.followUps = [];
+      }
+      
+      return student;
+    });
     
-    // Aplicar filtro de vencimento
+    // 🚀 OTIMIZAÇÃO 3: Aplicar filtro após processar dados
     const filteredStudents = filterStudentsForMonth(allStudents, targetMonth);
     
-    console.log(`Filtro de vencimento aplicado: ${allStudents.length} total -> ${filteredStudents.length} para o mês ${targetMonth}`);
+    console.timeEnd(`⚡ [Performance] Carregamento otimizado para ${targetMonth}`);
+    console.log(`✅ Resultado: ${allStudents.length} total → ${filteredStudents.length} para ${targetMonth}`);
+    console.log(`🎯 Follow-ups carregados: ${filteredStudents.reduce((acc, s) => acc + s.followUps.length, 0)} total`);
+    console.log(`📈 Status history carregados: ${filteredStudents.reduce((acc, s) => acc + s.statusHistory.length, 0)} total`);
     
     return filteredStudents;
   } catch (error) {
-    console.error("Erro ao obter estudantes com filtro de vencimento:", error);
+    console.error("❌ Erro ao obter estudantes com filtro otimizado:", error);
     toast.error("Erro ao carregar dados do banco de dados", {
       description: "Verifique sua conexão e tente novamente."
     });

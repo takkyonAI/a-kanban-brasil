@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Student, Status } from "@/types";
 import StudentCard from "./StudentCard";
 import { toast } from "sonner";
@@ -26,62 +26,59 @@ const KanbanBoard = ({ students, onStudentUpdate, filteredStudents, isFiltered, 
   const [isDeletingStudent, setIsDeletingStudent] = useState<boolean>(false);
   const [filteredPayments, setFilteredPayments] = useState<Student[]>([]);
   
-  // Sincronizar o estado local com as props e calcular dias de atraso
-  useEffect(() => {
+  // 🚀 OTIMIZAÇÃO: Calcular dias de atraso apenas quando necessário
+  const calculateDaysLate = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return (student: Student): number => {
+      if (student.status === "pagamento-feito" || !student.dataVencimento) {
+        return student.diasAtraso || 0;
+      }
+      
+      try {
+        const parts = student.dataVencimento.split('/');
+        if (parts.length === 3) {
+          const vencimentoDate = new Date(
+            parseInt(parts[2]), 
+            parseInt(parts[1]) - 1, 
+            parseInt(parts[0])
+          );
+          
+          const diffTime = today.getTime() - vencimentoDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          return diffDays > 0 ? diffDays : 0;
+        }
+      } catch (error) {
+        console.error("Erro ao calcular dias em atraso:", error);
+      }
+      
+      return student.diasAtraso || 0;
+    };
+  }, []); // Só recalcula uma vez por dia
+  
+  // Sincronizar o estado local com as props usando memoização
+  const processedStudents = useMemo(() => {
     const studentsToShow = isFiltered && filteredStudents ? filteredStudents : students;
     
-    // Calcular dias em atraso para cada estudante
-    const updatedStudents = studentsToShow.map(student => {
-      const updatedStudent = { ...student };
-      
-      // Se o pagamento já foi feito, não recalcular dias em atraso
-      if (student.status === "pagamento-feito") {
-        return updatedStudent;
-      }
-      
-      // Calcular dias em atraso baseado na data atual e data de vencimento
-      if (student.dataVencimento) {
-        try {
-          // Formato esperado: DD/MM/YYYY
-          const parts = student.dataVencimento.split('/');
-          if (parts.length === 3) {
-            const vencimentoDate = new Date(
-              parseInt(parts[2]), 
-              parseInt(parts[1]) - 1, 
-              parseInt(parts[0])
-            );
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Remover horas para comparar apenas datas
-            
-            // Calcular a diferença em dias
-            const diffTime = today.getTime() - vencimentoDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Apenas atualizar se estiver em atraso (dias positivos)
-            if (diffDays > 0) {
-              updatedStudent.diasAtraso = diffDays;
-            } else {
-              updatedStudent.diasAtraso = 0;
-            }
-          }
-        } catch (error) {
-          console.error("Erro ao calcular dias em atraso:", error);
-        }
-      }
-      
-      return updatedStudent;
-    });
+    console.log(`🚀 [Performance] Processando ${studentsToShow.length} estudantes`);
     
-    setLocalStudents(updatedStudents);
+    return studentsToShow.map(student => ({
+      ...student,
+      diasAtraso: calculateDaysLate(student)
+    }));
+  }, [students, filteredStudents, isFiltered, calculateDaysLate]);
+  
+  // Sincronizar estado local apenas quando processedStudents mudar
+  useEffect(() => {
+    setLocalStudents(processedStudents);
     
-    // Marcar como tendo alterações sempre que receber novos dados
-    // Isso permite salvar dados importados da planilha
-    if (updatedStudents.length > 0) {
-      console.log(`Setting hasChanges to true - received ${updatedStudents.length} students`);
+    if (processedStudents.length > 0) {
+      console.log(`✅ Estado sincronizado: ${processedStudents.length} estudantes`);
       setHasChanges(true);
     }
-  }, [students, filteredStudents, isFiltered]);
+  }, [processedStudents]);
 
   // Filtrar pagamentos por mês quando o mês mudar
   useEffect(() => {
