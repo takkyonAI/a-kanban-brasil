@@ -34,11 +34,8 @@ const StudentDetailsDialogV2 = ({
 }: StudentDetailsDialogV2Props) => {
   const { username, user, isLoggedIn } = useAuth();
   
-  // Debug do contexto de autenticação - LOGS ÓBVIOS - ATUALIZADO AGORA!
-  console.log('🚨🚨🚨 MODAL ABERTO PARA:', student.nome);
-  console.log('🔐 USUÁRIO LOGADO:', { username, isLoggedIn, role: user?.role });
-  console.log('📝 PODE EDITAR:', { canEditStudentData: true }); // Forçando true para teste
-  console.log('⏰ TIMESTAMP:', new Date().toLocaleTimeString()); // Para confirmar recompilação
+  // Debug do contexto de autenticação
+  console.log('📝 Modal aberto para:', student.nome, '| Usuário:', username, '| Role:', user?.role);
   const [observacoes, setObservacoes] = useState(student.observacoes || "");
   const [dataPagamento, setDataPagamento] = useState(student.dataPagamento || "");
   const [isDateRequired, setIsDateRequired] = useState(false);
@@ -64,23 +61,11 @@ const StudentDetailsDialogV2 = ({
   // Permitir edição se: 1) é admin, 2) não há criador, 3) é o criador, 4) username é null
   const canEditStudentData = user?.role === 'admin' || !student.createdBy || student.createdBy === username || !username;
   
-  // Debug de permissões - logs detalhados
-  console.log(`[StudentDetails] 🔍 Debug completo para ${student.nome}:`, {
-    student_createdBy: student.createdBy,
-    current_username: username,
-    username_type: typeof username,
-    username_length: username?.length,
-    canEditObservacoes,
-    canEditStudentData,
-    isEditingStudent,
-    modal_isOpen: isOpen
-  });
-  
-  // Log específico para o botão de edição
-  console.log(`[StudentDetails] 🎛️ Botão de edição deve aparecer?`, {
-    condition_1: !isEditingStudent,
-    condition_2: canEditStudentData,
-    final_result: (!isEditingStudent && canEditStudentData)
+  // Debug de permissões
+  console.log(`🔐 Permissões para ${student.nome}:`, {
+    criador: student.createdBy,
+    usuarioAtual: username,
+    podeEditar: canEditStudentData
   });
 
   // Reset form when student changes
@@ -420,25 +405,23 @@ const StudentDetailsDialogV2 = ({
                   </div>
                 )}
               </div>
-              {!isEditingStudent && (
+              {!isEditingStudent && canEditStudentData && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    console.log('🔥 BOTÃO DE EDIÇÃO CLICADO!', { user, username, student: student.nome });
+                    console.log('📝 BOTÃO DE EDIÇÃO CLICADO!', { user, username, student: student.nome });
                     setIsEditingStudent(true);
                   }}
-                  className="h-8 px-2"
-                  title="🔧 EDITAR DADOS DO ALUNO"
+                  className="h-8 px-2 hover:bg-blue-50"
+                  title="Editar dados do aluno"
                   style={{ 
-                    backgroundColor: '#ff6b6b',
+                    backgroundColor: '#3b82f6',
                     color: 'white',
-                    border: '3px solid #ff0000',
-                    fontWeight: 'bold'
+                    border: '1px solid #2563eb'
                   }}
                 >
                   <Edit3 className="h-4 w-4" />
-                  EDIT
                 </Button>
               )}
             </div>
