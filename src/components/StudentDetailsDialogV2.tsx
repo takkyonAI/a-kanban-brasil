@@ -34,10 +34,11 @@ const StudentDetailsDialogV2 = ({
 }: StudentDetailsDialogV2Props) => {
   const { username, user, isLoggedIn } = useAuth();
   
-  // Debug do contexto de autenticação - LOGS ÓBVIOS
+  // Debug do contexto de autenticação - LOGS ÓBVIOS - ATUALIZADO AGORA!
   console.log('🚨🚨🚨 MODAL ABERTO PARA:', student.nome);
   console.log('🔐 USUÁRIO LOGADO:', { username, isLoggedIn, role: user?.role });
   console.log('📝 PODE EDITAR:', { canEditStudentData: true }); // Forçando true para teste
+  console.log('⏰ TIMESTAMP:', new Date().toLocaleTimeString()); // Para confirmar recompilação
   const [observacoes, setObservacoes] = useState(student.observacoes || "");
   const [dataPagamento, setDataPagamento] = useState(student.dataPagamento || "");
   const [isDateRequired, setIsDateRequired] = useState(false);
